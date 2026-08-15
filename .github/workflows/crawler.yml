@@ -25,3 +25,4 @@ jobs:
           CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
         run: python scripts/crawler.py
+        
