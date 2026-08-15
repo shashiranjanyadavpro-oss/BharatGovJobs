@@ -1,8 +1,7 @@
 import os
-import json
 import hashlib
 import requests
-from datetime import datetime
+from bs4 import BeautifulSoup
 import uuid
 
 CF_ACCOUNT_ID = os.environ.get("CF_ACCOUNT_ID")
@@ -11,7 +10,7 @@ CF_API_TOKEN = os.environ.get("CF_API_TOKEN")
 
 def push_to_d1(job):
     if not all([CF_ACCOUNT_ID, CF_DATABASE_ID, CF_API_TOKEN]):
-        print("❌ Error: Cloudflare API credentials missing!")
+        print("❌ Cloudflare API credentials missing!")
         return
 
     url = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/d1/database/{CF_DATABASE_ID}/query"
@@ -40,51 +39,62 @@ def push_to_d1(job):
     try:
         response = requests.post(url, headers=headers, json=query)
         result = response.json()
-        
         if result.get('success'):
-            print(f"✅ Success: '{job['title']}' saved as DRAFT in D1!")
+            print(f"✅ Saved to D1: {job['title']}")
+        elif "UNIQUE constraint failed" in str(result):
+            print(f"⚠️ Duplicate: {job['title']} already present.")
         else:
-            if "UNIQUE constraint failed" in str(result):
-                print(f"⚠️ Duplicate Check: '{job['title']}' already exists. Skipping.")
-            else:
-                print(f"❌ Database Error: {result}")
+            print(f"❌ DB Error: {result}")
     except Exception as e:
-        print(f"❌ API Error: {e}")
+        print(f"❌ Request Error: {e}")
 
-def run_crawler():
-    print("🚀 Starting BharatGovJobs Master Crawler...")
-    
-    target_url = "https://ssc.gov.in/"
-    print(f"Scanning {target_url} for Official Notices...")
-    
-    scraped_title = "SSC CHSL Recruitment Notice 2026 (Demo Extraction)"
-    pdf_link = "https://ssc.gov.in/notices/chsl-2026-official.pdf"
-    
-    if not pdf_link.endswith(".pdf"):
-        print("❌ Verification Failed: No Official PDF found. Rejecting job.")
-        return
-
-    hash_string = f"{scraped_title}-{pdf_link}".encode('utf-8')
-    job_hash = hashlib.md5(hash_string).hexdigest()
-
-    job_data = {
-        "id": f"job_{uuid.uuid4().hex[:8]}",
-        "slug": f"ssc-chsl-demo-{uuid.uuid4().hex[:6]}",
-        "title": scraped_title,
-        "title_hi": "कर्मचारी चयन आयोग सीएचएसएल भर्ती 2026",
-        "department": "Staff Selection Commission",
-        "qualification": "12th Pass",
-        "application_start": "2026-08-15",
-        "application_end": "2026-09-15",
-        "state": "All India",
-        "source_url": target_url,
-        "official_pdf_url": pdf_link,
-        "hash": job_hash
+def crawl_ssc():
+    print("🔍 Fetching live notices from SSC portal...")
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
     
-    print(f"🔍 Found Valid PDF Job: {scraped_title}")
-    print("💾 Pushing to Cloudflare D1 Database...")
-    push_to_d1(job_data)
+    target_url = "https://ssc.gov.in"
+    try:
+        res = requests.get(target_url, headers=headers, timeout=15)
+        soup = BeautifulSoup(res.text, 'html.parser')
+        
+        links = soup.find_all('a', href=True)
+        pdf_count = 0
+
+        for a in links:
+            href = a['href'].strip()
+            text = a.get_text(strip=True)
+            
+            # The PDF Must Rule: PDF link aur title dono hone chahiye
+            if href.lower().endswith('.pdf') and len(text) > 10:
+                full_pdf_url = href if href.startswith('http') else f"{target_url}/{href.lstrip('/')}"
+                job_hash = hashlib.md5(f"{text}-{full_pdf_url}".encode('utf-8')).hexdigest()
+                
+                job_data = {
+                    "id": f"job_{uuid.uuid4().hex[:8]}",
+                    "slug": f"ssc-{uuid.uuid4().hex[:6]}",
+                    "title": text,
+                    "title_hi": text,
+                    "department": "Staff Selection Commission",
+                    "qualification": "Check Notification",
+                    "application_start": "2026-08-15",
+                    "application_end": "2026-09-15",
+                    "state": "All India",
+                    "source_url": target_url,
+                    "official_pdf_url": full_pdf_url,
+                    "hash": job_hash
+                }
+                
+                push_to_d1(job_data)
+                pdf_count += 1
+                if pdf_count >= 3:  # Test run ke liye top 3 notices
+                    break
+                    
+        if pdf_count == 0:
+            print("ℹ️ No direct PDF notices found on landing page right now.")
+    except Exception as e:
+        print(f"❌ Crawl Failed: {e}")
 
 if __name__ == "__main__":
-    run_crawler()
+    crawl_ssc()
