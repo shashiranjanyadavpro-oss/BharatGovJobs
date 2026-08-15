@@ -12,7 +12,7 @@ export async function onRequestGet(context) {
   }
 
   // Backup real jobs if DB empty
-  if (!jobs || jobs.length === 0) {
+  if (!jobs || jobs.length < 3) {
     jobs = [
       { id: 1, title: "SSC Combined Graduate Level (CGL) 2026", title_hi: "SSC CGL भर्ती 2026", department: "SSC", qualification: "Graduation", application_end: "2026-08-30", official_pdf_url: "https://ssc.nic.in", verification_status: "VERIFIED" },
       { id: 2, title: "UPSC Civil Services Prelims 2026", title_hi: "UPSC सिविल सेवा 2026", department: "UPSC", qualification: "Graduation", application_end: "2026-09-10", official_pdf_url: "https://upsc.gov.in", verification_status: "VERIFIED" },
