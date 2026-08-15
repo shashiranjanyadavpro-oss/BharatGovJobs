@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BharatGovJobs - Latest Sarkari Naukri</title>
+    <!-- Tailwind CSS for Design -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+    <header class="bg-blue-800 text-white p-5 shadow-lg">
+        <h1 class="text-3xl font-bold text-center">BharatGovJobs 🇮🇳</h1>
+        <p class="text-center text-blue-200 text-sm mt-1">Sabse Tez, Sabse Sateek Sarkari Naukri Updates</p>
+    </header>
+    
+    <main class="max-w-4xl mx-auto mt-8 p-4">
+        <h2 class="text-xl font-bold mb-5 text-gray-800 border-b-2 border-blue-800 pb-2">Latest Notifications (Live Database)</h2>
+        
+        <div id="job-list" class="space-y-4">
+            <p class="text-gray-500 font-medium">Fetching jobs from server...</p>
+        </div>
+    </main>
+
+    <script>
+        async function loadJobs() {
+            try {
+                // API se data mangwana
+                const res = await fetch('/api/jobs');
+                const jobs = await res.json();
+                const container = document.getElementById('job-list');
+                container.innerHTML = '';
+                
+                if(jobs.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500">Abhi koi nayi job nahi hai.</p>';
+                    return;
+                }
+
+                // Data ko HTML cards me badalna
+                jobs.forEach(job => {
+                    container.innerHTML += `
+                        <div class="bg-white p-5 rounded-lg shadow hover:shadow-md transition duration-200 border-l-4 border-blue-600">
+                            <h3 class="text-lg font-bold text-blue-900">${job.title}</h3>
+                            <p class="text-sm text-gray-600 mt-2">
+                                🏢 <span class="font-semibold">Dept:</span> ${job.department} | 
+                                🎓 <span class="font-semibold">Qual:</span> ${job.qualification}
+                            </p>
+                            <div class="mt-4 flex items-center justify-between">
+                                <a href="${job.official_pdf_url}" target="_blank" class="bg-blue-100 text-blue-800 px-4 py-2 rounded text-sm font-bold hover:bg-blue-200 transition">📄 View Official PDF</a>
+                                <span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded font-bold">Status: ${job.status}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+            } catch (err) {
+                document.getElementById('job-list').innerHTML = '<p class="text-red-500">Error connecting to database.</p>';
+            }
+        }
+        loadJobs();
+    </script>
+</body>
+      </html>
+      
