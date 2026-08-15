@@ -1,21 +1,15 @@
-export async function onRequestGet(context) {
+export async function onRequest(context) {
   try {
-    // Cloudflare natively environment variables aur DB ko context me pass karta hai
-    const db = context.env.DB;
-    
-    if (!db) {
-      return new Response(JSON.stringify({ error: "Database not bound" }), { status: 500 });
-    }
-
-    const { results } = await db.prepare("SELECT * FROM jobs WHERE status = 'PUBLISHED' ORDER BY created_at DESC").all();
+    // DB se jobs nikalna (DRAFT aur LIVE dono)
+    const { results } = await context.env.DB.prepare("SELECT * FROM jobs ORDER BY id DESC").all();
     
     return new Response(JSON.stringify(results), {
-      headers: { 
+      headers: {
         "Content-Type": "application/json",
-        "Cache-Control": "no-cache"
+        "Access-Control-Allow-Origin": "*"
       }
     });
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 500 });
   }
 }
