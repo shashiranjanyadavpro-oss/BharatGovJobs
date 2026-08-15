@@ -1,10 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
-  images: {
-    unoptimized: true,
-  },
-  trailingSlash: true,
+  reactStrictMode: true,
+  // output: 'export', <-- Ise humne hata diya hai taaki Edge API kaam kar sake
 };
 
 module.exports = nextConfig;
